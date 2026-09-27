@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Recipe Finder</title>
+<style>
+  :root{
+    --accent:#ff6b6b;
+    --muted:#666;
+    --card: rgba(255,255,255,0.9);
+    --glass: rgba(255,255,255,0.75);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    min-height:100vh;
+    margin:0;
+    padding:24px;
+
+    /* full page background image */
+    background-image: url('images/background.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-attachment: fixed;
+    color:#222;
+  }
+
+  /* Overlay to darken background for legibility */
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background: rgba(0,0,0,0.45);
+    pointer-events:none;
+    z-index:0;
+  }
+
+  /* place app above overlay */
+  #app-root{ position:relative; z-index:1; }
+
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    margin-bottom:18px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .logo{
+    width:56px;height:56px;border-radius:8px;
+    background:linear-gradient(135deg,var(--accent),#ffa07a);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.2)
+  }
+  .title{ font-size:20px;font-weight:700;color:white}
+  .subtitle{ font-size:12px;color: #fff9; margin-top:2px }
+
+  nav.tabs{ display:flex; gap:10px; align-items:center; }
+  nav.tabs button{
+    background:transparent;border:0;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700;color:#fff9;
+    backdrop-filter: blur(2px);
+  }
+  nav.tabs button.active{ background: rgba(255,255,255,0.08); box-shadow: 0 6px 18px rgba(0,0,0,0.4); transform:translateY(-2px); }
+
+  .container{ display:grid; grid-template-columns:1fr; gap:18px; }
+
+  header.hero{
+    background: var(--glass);
+    padding:18px;
+    border-radius:14px;
+    display:flex;
+    gap:18px;
+    align-items:center;
+    justify-content:space-between;
+    box-shadow:0 12px 30px rgba(0,0,0,0.35);
+  }
+  .hero-left{max-width:66%}
+  .about{ color:#111; line-height:1.5 }
+  .mood{
+    margin-top:12px;
+    font-weight:700;
+    font-size:18px;
+    overflow:hidden;
+    position:relative;
+    height:28px;
+  }
+  .mood .scroll{ position:absolute; white-space:nowrap; will-change:transform; animation: scrollText 12s linear infinite; color:#b21; }
+  @keyframes scrollText{ 0%{ transform: translateX(120%); } 100%{ transform: translateX(-120%); } }
+
+  .hero-right{
+    width:200px;height:140px;border-radius:12px; overflow:hidden; flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff,#f6f6f6)
+  }
+  .hero-right img{ width:100%;height:100%;object-fit:cover; display:block; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
+    gap:14px;
+  }
+  .card{
+    background:var(--card);
+    border-radius:12px;
+    padding:10px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);
+    display:flex;flex-direction:column;gap:8px;cursor:pointer;
+  }
+  .card img{ width:100%;height:120px;object-fit:cover;border-radius:10px;display:block;}
+  .card .name{ font-weight:700; font-size:15px }
+  .card .meta{ font-size:12px; color:var(--muted) ; display:flex; justify-content:space-between; align-items:center;}
+  .heart{ width:28px;height:28px;border-radius:8px;border:1px solid #eee;display:flex;align-items:center;justify-content:center;cursor:pointer; }
+  .heart.active{ background:linear-gradient(135deg,var(--accent),#ff9a8a); color:white; border:0 }
+
+  .recipe-view{
+    background:var(--card);
+    padding:18px;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,0.25);
+  }
+  .recipe-view img{ width:100%; max-height:360px; object-fit:cover; border-radius:10px; margin-bottom:12px }
+  .back{ display:inline-block;margin-bottom:10px;color:var(--accent);cursor:pointer;font-weight:700 }
+
+  .form{
+    background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.12)
+  }
+  .form label{ display:block;margin-bottom:6px;font-weight:600 }
+  .form input[type="text"], .form textarea, .form select{ width:100%; padding:8px;border-radius:8px;border:1px solid #eee;margin-bottom:10px }
+  .form input[type="file"]{ margin-bottom:10px }
+  .btn{ background:var(--accent);color:white;padding:8px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:700 }
+
+  footer{ margin-top:18px; color:#fff9; text-align:center; font-size:13px }
+
+  @media (max-width:720px){
+    .hero{ flex-direction:column; align-items:flex-start }
+    .hero-right{ width:100%; height:140px }
+    nav.tabs{ gap:6px; flex-wrap:wrap }
+  }
+</style>
+</head>
+<body>
+  <div id="app-root">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">RF</div>
+        <div>
+          <div class="title">Recipe Finder</div>
+          <div class="subtitle">Discover, save and add your favourite recipes</div>
+        </div>
+      </div>
+
+      <nav class="tabs" aria-label="Main navigation">
+        <button data-route="home" class="active">Home</button>
+        <button data-route="favourites">My Favourites</button>
+        <button data-route="meat">Meat and Sea Food</button>
+        <button data-route="drinks">Drinks</button>
+        <button data-route="yourrecipe">Your Recipe</button>
+      </nav>
+    </div>
+
+    <main class="container" id="app"></main>
+
+    <footer>Built with ❤️ — Recipe Finder</footer>
+  </div>
+
+<script>
+/* ===== Helper ===== */
+function imgPath(name){ return 'images/' + encodeURIComponent(name); }
+
+/* ===== Dishes (all combined) =====
+   - All filenames are expected inside /images/ folder
+*/
+const SAMPLE_DISHES = [
+  /* Favourites (as provided) */
+  { id:'fav1', name:'Ada Pradhaman', category:'other', image: imgPath('aadapayasam.jpg'), recipe: 'Ada Pradhaman (payasam) recipe... (Ada Pradhaman is a traditional Kerala dessert made especially during Onam and festive occasions. To prepare it, start by cooking one cup of rice ada in boiling water until it becomes soft but not mushy. Drain it, rinse in cold water to remove the stickiness, and set aside. Next, melt about one and a half cups of jaggery with a little water and strain to remove impurities. In a thick-bottomed pan, heat a tablespoon of ghee and sauté the cooked ada for a couple of minutes. Then, add the jaggery syrup and cook until it slightly thickens. Pour in two cups of thin coconut milk and simmer until the mixture thickens again. Add one and a half cups of medium-thick coconut milk and continue cooking so the flavors blend well. Finally, switch off the heat and mix in one cup of thick coconut milk, ensuring not to boil it afterward to prevent curdling. In a separate small pan, heat ghee and fry cashews and raisins until golden, and optionally fry small coconut bits until crisp. Add these to the pradhaman along with a pinch of cardamom and dry ginger powder. Mix well and serve warm or at room temperature. The creamy texture of coconut milk combined with the sweetness of jaggery and the aroma of cardamom makes Ada Pradhaman a rich, flavorful treat that captures the essence of Kerala’s festive cuisine.).' },
+  { id:'fav2', name:'Chicken Biryani', category:'meat', image: imgPath('cbriyani.jpg'), recipe: 'Chicken Biryani recipe... (Chicken Biryani is a flavorful and aromatic rice dish made with basmati rice, chicken, and a blend of rich spices. To prepare it, start by washing and soaking two cups of basmati rice for about 30 minutes. In a large bowl, marinate 500 grams of cleaned chicken pieces with half a cup of curd, one tablespoon of ginger-garlic paste, one teaspoon each of red chili powder, turmeric powder, coriander powder, and garam masala, along with salt and a few mint and coriander leaves. Let the chicken marinate for at least one hour for better flavor. In a heavy-bottomed pan, heat three tablespoons of ghee or oil and fry thinly sliced onions until they turn golden brown; set aside some for garnish. In the same pan, add whole spices such as bay leaf, cloves, cinnamon, cardamom, and star anise, and sauté until fragrant. Add the marinated chicken and cook until the meat is partially cooked and coated with spices. Meanwhile, cook the soaked rice in boiling water with a little salt and whole spices until it is 70–80% cooked, then drain the water. Layer the partially cooked rice over the chicken in the pan, sprinkle fried onions, mint leaves, and coriander leaves between layers, and drizzle a few teaspoons of ghee on top. Cover the pan with a tight lid, seal the edges with dough if needed, and cook on low flame (dum) for about 20–25 minutes until the rice and chicken are fully cooked and infused with the masala. Once done, gently mix the layers without breaking the rice. Serve the Chicken Biryani hot with raita, boiled eggs, or salad. Its rich aroma, tender chicken, and perfectly spiced rice make it a royal and satisfying meal.).' },
+  { id:'fav3', name:'Vada Pav', category:'other', image: imgPath('download (4).jpg'), recipe: 'Vada Pav recipe... ( Vada Pav, often called the Indian burger, is a famous street food from Mumbai known for its spicy, flavorful taste. To prepare it, start by boiling two large potatoes until soft, then peel and mash them well. In a pan, heat one tablespoon of oil and add half a teaspoon of mustard seeds, a pinch of asafoetida, a few curry leaves, and two finely chopped green chilies. Sauté for a few seconds, then add one teaspoon of ginger-garlic paste and cook until the raw smell disappears. Add turmeric powder, salt, and the mashed potatoes, mix well, and cook for a minute. Turn off the flame, let the mixture cool, and shape it into small round balls. In another bowl, make a smooth batter by mixing one cup of besan (gram flour) with a pinch of turmeric, red chili powder, salt, and water as needed. Heat oil in a deep pan, dip each potato ball into the batter, coat it evenly, and deep-fry until golden and crisp.To assemble the vada pav, slice pav buns in half horizontally, spread some green chutney (made of coriander, mint, and green chilies) and tamarind chutney on the inner sides, and place a hot fried vada in between. Sprinkle a little dry garlic chutney powder for an authentic spicy touch. Press gently and serve it warm with fried green chilies on the side. The combination of the soft pav, spicy potato vada, and tangy chutneys makes Vada Pav a mouthwatering snack that perfectly captures the essence of Mumbai’s street food culture.).' },
+  { id:'fav4', name:'Momos', category:'other', image: imgPath('momos.jpg'), recipe: 'Momos recipe... (Momos, also known as steamed dumplings, are a popular street food originating from Tibet and widely loved across India for their soft, juicy filling and spicy chutney. To prepare them, start by making the dough by mixing one and a half cups of maida (all-purpose flour) with a pinch of salt and a few drops of oil. Add water gradually and knead into a soft, smooth dough. Cover it and let it rest for about 20 minutes. For the filling, heat a tablespoon of oil in a pan, add two finely chopped garlic cloves and a small onion, and sauté until translucent. Then add one cup of finely chopped vegetables such as cabbage, carrot, capsicum, and spring onions. Stir-fry on high flame for 2–3 minutes, season with salt, pepper, and a little soy sauce, and let the mixture cool.Roll out small circles from the dough, place a spoonful of filling in the center, and fold the edges to form pleats, sealing them tightly. Steam the momos in a steamer or idli cooker for about 8–10 minutes until they turn slightly glossy and firm.For the momo chutney, boil 2–3 dried red chilies and 2 tomatoes for a few minutes, then peel the tomatoes and blend them together with 2 garlic cloves, a small piece of ginger, salt, and a teaspoon of vinegar or lemon juice. Heat a little oil in a pan, add the blended paste, and cook for 5–7 minutes until thick and slightly tangy. Adjust spice and salt as needed.Serve the hot momos with the spicy red chutney. The soft, juicy dumplings paired with the bold, fiery chutney create the perfect balance of flavors — light, savory, and utterly satisfying, making momos an irresistible snack or appetizer for any occasion.).' },
+  { id:'fav5', name:'Pazham Pori', category:'other', image: imgPath('palampori.jpg'), recipe: 'Pazham Pori recipe... (Banana fritters, also known as **Pazham Pori** or **Vazhakkappam** in South India, are a sweet and crispy tea-time snack made from ripe bananas coated in a golden batter. To prepare them, take 2 ripe but firm bananas (preferably *Nendram* variety for authentic flavor) and slice them lengthwise or into medium-thick pieces. In a mixing bowl, combine one cup of maida (all-purpose flour), two tablespoons of rice flour (for crispiness), two tablespoons of sugar, a pinch of turmeric powder for color, and a pinch of salt. Gradually add water and mix to form a smooth, thick batter — it should be of pouring consistency but not too runny. You can also add a pinch of cardamom powder for extra aroma.Heat oil in a deep frying pan over medium flame. Once the oil is hot, dip each banana slice into the batter, ensuring it’s well coated, and gently drop it into the oil. Fry the fritters in batches until they turn golden brown and crisp on both sides. Remove them using a slotted spoon and place them on tissue paper to absorb excess oil. Serve the banana fritters hot with a cup of chai or coffee. The combination of the crispy outer layer and the soft, sweet banana inside makes these fritters a perfect comfort snack — simple, nostalgic, and irresistibly delicious.).' },
+  { id:'fav6', name:'Prawn Gravy', category:'meat', image: imgPath('prawn gravy.jpg'), recipe: 'Prawn Gravy recipe... (Prawn Gravy, or *Eral Kuzhambu* in Tamil, is a deliciously spicy and tangy South Indian seafood dish packed with coastal flavors. To prepare it, start by cleaning and deveining 500 grams of prawns thoroughly, then marinate them with a pinch of turmeric powder, a little red chili powder, and salt. Set them aside for 10–15 minutes. In a heavy-bottomed pan, heat two tablespoons of gingelly (sesame) oil and add half a teaspoon of mustard seeds. Once they splutter, add a few curry leaves, one finely chopped onion, and sauté until the onion turns golden brown. Add one tablespoon of ginger-garlic paste and cook until the raw smell disappears. Then add two finely chopped tomatoes and cook until they become soft and the oil starts to separate from the masala.Next, add one teaspoon each of red chili powder, coriander powder, and cumin powder, half a teaspoon of turmeric powder, and salt to taste. Stir well and let the spices cook for a minute. Pour in one and a half cups of tamarind extract (made from a small lemon-sized tamarind) and bring the mixture to a boil. Once it starts boiling, add the marinated prawns and let them cook on medium flame for about 8–10 minutes, or until they turn pink and tender. For a rich and creamy flavor, grind a quarter cup of grated coconut with a few fennel seeds into a fine paste and add it to the gravy. Simmer for another 5 minutes until the gravy thickens and becomes aromatic. Finally, garnish with fresh coriander leaves and a few drops of gingelly oil for extra flavor.Serve the hot prawn gravy with steamed rice, dosa, idli, or chapati. The combination of spicy, tangy, and slightly creamy flavors along with the soft, juicy prawns makes this dish a true South Indian seafood delight — comforting, aromatic, and absolutely mouthwatering.).' },
+  { id:'fav7', name:'Squid Roast', category:'meat', image: imgPath('sqiud.jpg'), recipe: 'Squid Roast recipe... (Squid Gravy, also known as Kanava or Koonthal Kulambu in South India, is a delicious coastal-style dish rich in spice, aroma, and flavor. To prepare it, start by cleaning 500 grams of squid thoroughly and cutting it into rings or bite-sized pieces. In a pan, heat two tablespoons of oil, preferably gingelly (sesame) oil, and add half a teaspoon of mustard seeds. Once they splutter, add a few fenugreek seeds, curry leaves, and one finely chopped onion. Sauté until the onions turn golden brown, then add one tablespoon of ginger-garlic paste and fry until the raw smell disappears. Add two chopped tomatoes and cook until they turn soft and the oil begins to separate. Next, add one teaspoon each of red chili powder, coriander powder, and cumin powder, half a teaspoon of turmeric powder, and salt to taste. Mix well to form a thick masala paste.Now, add the cleaned squid pieces and stir to coat them well with the masala. Squid cooks quickly, so pour in one and a half cups of tamarind extract (made by soaking a small lemon-sized tamarind in warm water) and a cup of water, then bring it to a boil. Reduce the flame and cook the gravy for about 10–12 minutes, allowing the squid to turn tender and absorb the tangy-spicy flavors. For a richer taste, you can add a few spoonfuls of freshly ground coconut paste with fennel seeds towards the end and simmer for a few minutes until the gravy thickens slightly. Finally, garnish with fresh coriander leaves and a drizzle of gingelly oil. Serve the squid gravy hot with steamed rice, idli, or dosa — its perfectly balanced spice, tanginess, and ocean-fresh aroma make it a mouthwatering favorite among seafood lovers.).' },
+  { id:'fav8', name:'White Sauce Pasta', category:'other', image: imgPath('whitesause.jpg'), recipe: 'Creamy White Sauce Pasta recipe... (Creamy white sauce pasta is a rich, smooth, and comforting dish loved for its cheesy, velvety texture and mild flavor. To prepare it, start by boiling 1½ cups of pasta (penne or macaroni works best) in salted water until it becomes al dente — soft yet slightly firm to bite. Drain the pasta, drizzle a little olive oil to prevent sticking, and set it aside. In a pan, melt two tablespoons of butter on low heat, then add one tablespoon of all-purpose flour (maida) and sauté for a minute without letting it brown. Gradually pour in 1½ cups of warm milk while whisking continuously to avoid lumps. Keep stirring until the sauce thickens to a creamy consistency. Add salt, crushed black pepper, and a pinch of chili flakes for mild spice. For extra flavor, mix in a little grated cheese (preferably mozzarella or cheddar) and stir until melted and smooth.Next, in another pan, heat a teaspoon of butter or olive oil and sauté finely chopped garlic along with a few vegetables such as capsicum, carrots, sweet corn, or broccoli until slightly soft yet crunchy. Add the cooked pasta to the sautéed vegetables, pour in the prepared white sauce, and toss everything together until the pasta is evenly coated. Simmer for a minute so the flavors blend beautifully. Finally, sprinkle some mixed herbs or oregano on top and serve hot. The result is a creamy, cheesy white sauce pasta with a silky texture and a mild, comforting taste — perfect for a cozy meal or a quick, delicious dinner.).' },
+
+  /* Meat & Sea Food (as provided) */
+  { id:'m1', name:'Chicken 65', category:'meat', image: imgPath('c65.jpg'), recipe:'Chicken 65 recipe...Chicken 65 is a popular South Indian spicy fried chicken dish known for its crispy texture and flavorful seasoning. To prepare it, clean and cut 500 grams of boneless chicken into small bite-sized pieces. In a bowl, marinate the chicken with two tablespoons of curd, one tablespoon of ginger-garlic paste, one teaspoon each of red chili powder, turmeric powder, and coriander powder, half a teaspoon of cumin powder, one tablespoon of corn flour, one tablespoon of rice flour, salt to taste, and a few drops of lemon juice. Mix well and let it rest for at least 30 minutes to absorb the flavors. Heat enough oil in a deep pan for frying, and once hot, fry the marinated chicken pieces in batches until they turn golden brown and crisp. Remove them onto paper towels to drain excess oil. In a separate pan, heat a little oil and sauté green chilies, curry leaves, and a few garlic cloves for added flavor, then toss the fried chicken pieces in this mixture. Optionally, sprinkle a few drops of lemon juice or garnish with chopped coriander leaves for a fresh touch. Serve the Chicken 65 hot as an appetizer or side dish — its spicy, tangy, and crispy taste makes it an all-time favorite snack.' },
+  { id:'m2', name:'Chicken Kulambu', category:'meat', image: imgPath('ckulambu.jpg'), recipe:'Chicken Kulambu recipe...Flavorful Chicken Kulambu is a traditional South Indian curry that’s rich, aromatic, and pairs perfectly with rice or idli. To prepare it, start by cleaning and cutting 500 grams of chicken into medium-sized pieces. In a pan, heat two tablespoons of oil and sauté one finely chopped onion until golden brown, then add one tablespoon of ginger-garlic paste and fry until the raw smell disappears. Next, add two chopped tomatoes and cook until they turn soft and mushy. Now, mix in one teaspoon each of red chili powder, coriander powder, and garam masala, along with half a teaspoon of turmeric powder and salt to taste. Stir well and let the masala cook until the oil begins to separate. Add the chicken pieces and coat them well in the masala, cooking for 5–7 minutes. Then pour in about one and a half cups of water (adjust for desired consistency) and let the curry simmer on medium flame until the chicken is tender and the flavors blend beautifully. For a richer taste, grind a small amount of grated coconut with a few fennel seeds and add it to the kulambu in the final stage of cooking. Let it boil for a few more minutes until the gravy thickens slightly. Finally, garnish with fresh coriander leaves and a drizzle of ghee if desired. Serve the hot, flavorful chicken kulambu with steamed rice, dosa, or chapati — its spicy, tangy, and slightly creamy texture makes it a comforting and delicious South Indian favorite.' },
+  { id:'m3', name:'Fish Kulambu', category:'meat', image: imgPath('fish kulambu.jpg'), recipe:'Fish Kulambu recipe...Flavorful Fish Kulambu is a traditional South Indian curry bursting with tangy, spicy, and aromatic flavors. To prepare it, start by cleaning and cutting 500 grams of firm fish such as seer (vanjaram), pomfret, or rohu into medium pieces. In a bowl, marinate the fish with a pinch of turmeric powder, red chili powder, and salt, and set it aside for 15–20 minutes. In a pan, heat two tablespoons of oil—preferably gingelly (sesame) oil for authentic flavor—and add half a teaspoon of mustard seeds. Once they splutter, add a few fenugreek seeds, curry leaves, and one finely chopped onion. Sauté until the onion turns golden brown, then add one tablespoon of ginger-garlic paste and cook until the raw smell disappears. Add two chopped tomatoes and cook until soft and mushy.Next, add one teaspoon each of red chili powder, coriander powder, and cumin powder, half a teaspoon of turmeric powder, and salt to taste. Stir well and let the masala cook until the oil separates. Pour in one and a half cups of tamarind extract (made by soaking a small lemon-sized ball of tamarind in warm water) and a cup of water, then bring it to a boil. Reduce the flame and let the kulambu simmer for 10 minutes so the flavors blend. Gently add the marinated fish pieces and cook on low flame for another 8–10 minutes without stirring too much to avoid breaking the fish. For a richer flavor, add a few spoonfuls of freshly ground coconut paste with fennel seeds towards the end and simmer for a few more minutes. Finally, garnish with fresh coriander leaves and a few drops of gingelly oil. Serve the fish kulambu hot with steamed rice or idli — its spicy, tangy, and slightly creamy taste makes it a comforting South Indian favorite that’s full of coastal aroma and flavor.' },
+  
+  { id:'m5', name:'Fish Fry', category:'meat', image: imgPath('meenfry.jpg'), recipe:'Fish Fry recipe...Fish fry is a simple yet flavorful South Indian dish known for its crispy texture and aromatic spices. To prepare it, start by cleaning and cutting 4–5 pieces of firm fish such as seer (vanjaram), pomfret, or kingfish. In a bowl, mix one teaspoon each of red chili powder, coriander powder, turmeric powder, and pepper powder with salt, one tablespoon of ginger-garlic paste, a few drops of lemon juice, and a tablespoon of rice flour for crispiness. Add a teaspoon of oil and mix everything into a thick paste. Coat the fish pieces evenly with this masala and let them marinate for at least 30 minutes to absorb the flavors. Heat oil in a tawa or frying pan over medium flame and shallow-fry the marinated fish pieces for 3–4 minutes on each side until golden brown and crisp. Drain the excess oil on tissue paper and serve the fish fry hot with sliced onions, lemon wedges, and a sprinkle of pepper. The combination of spicy masala, crispy edges, and tender fish inside makes this dish an irresistible treat with rice or as a snack.' },
+  { id:'m6', name:'Crab Dry', category:'meat', image: imgPath('nandu dg.jpg'), recipe:'Crab Dry recipe...Nandu Gravy, or Crab Curry, is a rich and aromatic South Indian dish packed with the bold flavors of spices, coconut, and fresh crab. To prepare it, start by cleaning 3 to 4 medium-sized crabs thoroughly and lightly cracking the claws so they absorb the masala well. In a pan, heat two tablespoons of gingelly (sesame) oil and add half a teaspoon of mustard seeds. Once they splutter, add a few fenugreek seeds, curry leaves, and one finely chopped onion. Sauté until the onion turns golden brown, then add one tablespoon of ginger-garlic paste and fry until the raw smell disappears. Next, add two chopped tomatoes and cook until soft and mushy.Now, add one teaspoon each of red chili powder, coriander powder, and cumin powder, half a teaspoon of turmeric powder, and salt to taste. Mix well and cook until the oil separates from the masala. Add the cleaned crabs, stir well to coat them with the masala, and cook for about 5 minutes. Then pour in one and a half cups of tamarind extract (made from a small lemon-sized ball of tamarind) and a little water to adjust consistency. Let the curry boil for 10 minutes on medium flame so the crabs release their flavor into the gravy. For a rich and authentic touch, grind a quarter cup of grated coconut with a few fennel seeds into a smooth paste and add it to the curry. Simmer for another 5–7 minutes until the gravy thickens and turns glossy. Finally, garnish with fresh coriander leaves and a few drops of gingelly oil for extra aroma.Serve the hot and flavorful Nandu Gravy with steamed rice, idli, dosa, or chapati. The spicy, tangy, and slightly creamy taste combined with the natural sweetness of crab makes this dish a true coastal delicacy — comforting, hearty, and irresistibly delicious.' },
+  { id:'m7', name:'Crab Soup', category:'meat', image: imgPath('nandu.jpg'), recipe:'Crab Rasaam recipe...Nandu Rasam, or Crab Rasam, is a flavorful and spicy South Indian soup made with fresh crab, aromatic spices, and tangy tamarind — perfect for cold days or when you need a comforting meal. To prepare it, start by cleaning 3 to 4 medium-sized crabs thoroughly and cracking their claws slightly to let the flavors seep in. In a pot, heat two tablespoons of oil, preferably gingelly (sesame) oil, and add half a teaspoon of mustard seeds. Once they splutter, add a few curry leaves, two finely chopped shallots or one small onion, and two crushed garlic cloves. Sauté until golden brown, then add one chopped tomato and cook until it turns soft.Next, add one teaspoon each of red chili powder, coriander powder, and freshly ground pepper, along with half a teaspoon of turmeric powder and salt to taste. Stir well and fry the masala until aromatic. Add the cleaned crab pieces and sauté for 3–4 minutes so that they absorb the masala flavors. Then pour in one and a half cups of tamarind extract (made from a small lemon-sized ball of tamarind) along with a few cups of water, depending on how thin or thick you prefer your rasam. Add a handful of crushed peppercorns and cumin seeds for that authentic rasam flavor. Bring it to a boil, then simmer for 10–15 minutes until the crabs are cooked and the broth turns flavorful and slightly tangy. Finally, garnish with fresh coriander leaves and a few drops of ghee for extra aroma.Serve the hot Nandu Rasam with steamed rice or sip it as a spicy soup. The combination of crab essence, tangy tamarind, and peppery spice makes it a soul-soothing dish that boosts immunity and warms you from within — a true comfort food from Tamil coastal cuisine.' },
+  { id:'m8', name:'Pepper Chicken', category:'meat', image: imgPath('pepper c.jpg'), recipe:'Pepper Chicken recipe...Pepper chicken is a spicy and aromatic South Indian-style dry curry that’s full of bold flavors. To make it, heat two tablespoons of oil in a pan and sauté one finely chopped onion until golden brown. Add one tablespoon of ginger-garlic paste and fry until the raw smell disappears. Then add 500 grams of cleaned chicken pieces, one chopped tomato, and cook for a few minutes until the chicken starts releasing juices. Now, add one teaspoon each of red chili powder, coriander powder, and turmeric powder, half a teaspoon of cumin powder, salt to taste, and two teaspoons of freshly ground black pepper powder. Mix well and cook on medium flame, adding a little water to prevent sticking. Cover and simmer until the chicken becomes tender and the masala thickens. For extra flavor, sprinkle a pinch of garam masala and a few curry leaves before turning off the flame. Garnish with fresh coriander leaves and serve hot. The pepper chicken’s fiery, smoky taste and juicy texture make it perfect with chapati, parotta, or steamed rice — a hearty dish packed with traditional South Indian spice and aroma.' },
+
+  /* Drinks (as provided) */
+  { id:'dr1', name:'Iced Coffee', category:'drinks', image: imgPath('ccoffee.jpg'), recipe:'Iced Coffee recipe...Cold coffee is a refreshing and creamy beverage, perfect for hot days and quick energy boosts. To make it, take one cup of chilled milk, one tablespoon of instant coffee powder, two tablespoons of sugar (adjust to taste), and a few ice cubes. In a blender, add the coffee powder, sugar, two tablespoons of warm water, and blend for a few seconds until the coffee froths up slightly. Then pour in the chilled milk and add the ice cubes. Blend everything together for about 20–30 seconds until the mixture becomes smooth and frothy. For a richer taste, you can add a scoop of vanilla or chocolate ice cream while blending or as a topping before serving. Pour the cold coffee into a tall glass, and if you like, drizzle some chocolate syrup along the sides of the glass for a café-style look. Serve it immediately, chilled and frothy, with a straw. The result is a perfectly balanced cold coffee that’s creamy, slightly bitter from the coffee, and sweetly satisfying — an ideal drink to cool off and refresh your mind.' },
+  { id:'dr2', name:'Filter Coffee', category:'drinks', image: imgPath('coffee.jpg'), recipe:'Filter Coffee recipe...Tamil traditional filter coffee, also known as “Degree Coffee,” is a beloved South Indian beverage known for its strong aroma and rich, frothy taste. To prepare it, start by boiling water and pouring it into the upper compartment of a traditional South Indian coffee filter that contains 3 to 4 tablespoons of freshly ground coffee powder (preferably a blend of 80% coffee and 20% chicory). Place the lid on top and allow the hot water to slowly drip through the coffee grounds into the lower container, producing a thick decoction. Meanwhile, in a saucepan, boil one cup of milk with 1 to 2 teaspoons of sugar (adjust to taste). Once the decoction is ready, mix about ¼ cup of it with the hot milk, depending on how strong you prefer your coffee. For an authentic touch, pour the coffee back and forth between a tumbler and a dabarah (a small metal bowl) to create froth and blend the flavors well. Serve it piping hot in the traditional tumbler-dabarah set. Tamil filter coffee is best enjoyed fresh in the early morning or evening, accompanied by the soothing aroma of roasted coffee beans — a perfect start to the day or a comforting break after work.' },
+  { id:'dr3', name:'Watermelon Juice', category:'drinks', image: imgPath('wateermelon.jpg'), recipe:'Watermelon Juice recipe...Watermelon fresh juice is a naturally sweet, hydrating, and refreshing drink that’s perfect for hot summer days. To prepare it, take about two cups of ripe watermelon cubes, removing any seeds for a smooth texture. Place the pieces into a blender along with one tablespoon of sugar or honey if needed (though most watermelons are sweet enough), and add a few mint leaves for extra freshness. Squeeze in half a lemon to enhance the flavor and balance the sweetness. Blend everything until smooth and frothy. You can strain the juice through a fine sieve if you prefer a clearer drink, or leave it as is for a thicker texture. Pour the juice into a chilled glass, add a few ice cubes, and garnish with a small mint sprig or a thin slice of lemon on the rim. Serve immediately to enjoy its cool, fruity goodness. Watermelon fresh juice not only quenches thirst but also provides instant energy, making it a simple, healthy, and delicious way to stay refreshed.' },
+
+  /* Add any other items you want preloaded here */
+];
+
+/* ===== Storage helpers ===== */
+function loadDishes(){
+  const saved = JSON.parse(localStorage.getItem('rf_custom_dishes') || '[]');
+  const all = [...SAMPLE_DISHES];
+  saved.forEach(s=>{
+    const idx = all.findIndex(a=>a.id===s.id);
+    if(idx>=0) all[idx] = s; else all.push(s);
+  });
+  return all;
+}
+function saveCustomDishes(list){
+  const user = list.filter(d=>d.id && d.id.startsWith('user_'));
+  localStorage.setItem('rf_custom_dishes', JSON.stringify(user));
+}
+function getFavourites(){ return JSON.parse(localStorage.getItem('rf_favs') || '[]'); }
+function saveFavourites(ids){ localStorage.setItem('rf_favs', JSON.stringify(ids)); }
+
+/* ===== App state & routing ===== */
+const app = document.getElementById('app');
+const tabs = document.querySelectorAll('nav.tabs button');
+
+let state = { route:'home', dishes: loadDishes(), favs: getFavourites() };
+
+function setActiveTab(route){ tabs.forEach(t=>t.classList.toggle('active', t.dataset.route===route)); }
+function navigate(route, opts={}){ state.route = route; setActiveTab(route); render(); if(!opts.skipHash) window.location.hash = route; }
+
+/* ===== Renderers ===== */
+function render(){
+  state.dishes = loadDishes();
+  state.favs = getFavourites();
+  if(state.route==='home') return renderHome();
+  if(state.route==='favourites') return renderFavourites();
+  if(state.route==='meat') return renderCategory('meat');
+  if(state.route==='drinks') return renderCategory('drinks');
+  if(state.route==='yourrecipe') return renderYourRecipe();
+  if(state.route.startsWith('recipe:')) return renderRecipeDetail(state.route.split(':')[1]);
+  renderHome();
+}
+
+function renderHome(){
+  const heroImg = (state.dishes[0] && state.dishes[0].image) || '';
+  app.innerHTML = `
+    <header class="hero">
+      <div class="hero-left">
+        <h1 style="font-size:22px;margin-bottom:6px;color:#222">Recipe Finder</h1>
+        <p class="about">Welcome to Recipe Finder — your place to explore dishes, save favourites, and add your own recipes. Click a dish to view its recipe.</p>
+        <div class="mood" aria-hidden="true">
+          <div class="scroll">In the mood for food — Try something new • Save favourites • Add your own recipe</div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <img src="${heroImg}" alt="Featured dish" onerror="this.style.display='none'">
+      </div>
+    </header>
+
+    <section style="margin-top:8px">
+      <h2 style="margin-bottom:8px;color:white">Popular dishes</h2>
+      <div class="grid" id="grid"></div>
+    </section>
+  `;
+
+  const grid = document.getElementById('grid');
+  state.dishes.forEach(d=>{
+    const isFav = state.favs.includes(d.id);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = d.id;
+    card.innerHTML = `
+      <img src="${d.image}" alt="${escapeHtml(d.name)}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'400\\' height=\\'300\\'><rect width=\\'100%\\' height=\\'100%\\' fill=\\'#eee\\'/><text x=\\'50%\\' y=\\'50%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'#777\\' font-size=\\'18\\'>Image not provided</text></svg>'"/>
+      <div class="name">${escapeHtml(d.name)}</div>
+      <div class="meta">
+        <div style="text-transform:capitalize">${d.category === 'drinks' ? 'Drink' : 'Dish'}</div>
+        <div class="heart ${isFav ? 'active' : ''}" data-heart="${d.id}" title="Add to favourites">
+          ${isFav ? '♥' : '♡'}
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  grid.addEventListener('click', onGridClick);
+}
+
+function renderCategory(category){
+  app.innerHTML = `
+    <section>
+      <h2 style="margin-bottom:10px;color:white">${category === 'meat' ? 'Meat and Sea Food' : 'Drinks'}</h2>
+      <div class="grid" id="grid-cat"></div>
+    </section>
+  `;
+  const grid = document.getElementById('grid-cat');
+  const list = state.dishes.filter(d => (category==='meat'? d.category==='meat' : d.category==='drinks'));
+  if(list.length===0){ grid.innerHTML = '<div style="color:#fff9;padding:18px;background:var(--card);border-radius:10px">No dishes in this category yet.</div>'; return; }
+  list.forEach(d=>{
+    const isFav = state.favs.includes(d.id);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = d.id;
+    card.innerHTML = `
+      <img src="${d.image}" alt="${escapeHtml(d.name)}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'400\\' height=\\'300\\'><rect width=\\'100%\\' height=\\'100%\\' fill=\\'#eee\\'/><text x=\\'50%\\' y=\\'50%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'#777\\' font-size=\\'18\\'>Image not provided</text></svg>'"/>
+      <div class="name">${escapeHtml(d.name)}</div>
+      <div class="meta">
+        <div style="text-transform:capitalize">${d.category}</div>
+        <div class="heart ${isFav ? 'active' : ''}" data-heart="${d.id}">${isFav ? '♥' : '♡'}</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+  grid.addEventListener('click', onGridClick);
+}
+
+function renderFavourites(){
+  app.innerHTML = `
+    <section>
+      <h2 style="margin-bottom:10px;color:white">My Favourites</h2>
+      <div id="fav-wrap"></div>
+    </section>
+  `;
+  const wrap = document.getElementById('fav-wrap');
+  const favs = state.favs.map(id => state.dishes.find(d=>d.id===id)).filter(Boolean);
+  if(favs.length===0){
+    wrap.innerHTML = '<div style="color:#fff9;padding:18px;background:var(--card);border-radius:10px">You have no favourites yet. Click the heart on any dish to add it.</div>';
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  favs.forEach(d=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = d.id;
+    card.innerHTML = `
+      <img src="${d.image}" alt="${escapeHtml(d.name)}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'400\\' height=\\'300\\'><rect width=\\'100%\\' height=\\'100%\\' fill=\\'#eee\\'/><text x=\\'50%\\' y=\\'50%\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' fill=\\'#777\\' font-size=\\'18\\'>Image not provided</text></svg>'"/>
+      <div class="name">${escapeHtml(d.name)}</div>
+      <div class="meta">
+        <div>${d.category}</div>
+        <div class="heart active" data-heart="${d.id}">♥</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+  wrap.appendChild(grid);
+  grid.addEventListener('click', onGridClick);
+}
+
+function renderYourRecipe(){
+  app.innerHTML = `
+    <section>
+      <h2 style="margin-bottom:8px;color:white">Add Your Recipe</h2>
+
+      <div class="form" id="your-form">
+        <label for="rname">Dish name</label>
+        <input id="rname" type="text" placeholder="e.g., Grandma's Rasam" required>
+
+        <label for="rcat">Category</label>
+        <select id="rcat">
+          <option value="meat">Meat and Sea Food</option>
+          <option value="drinks">Drinks</option>
+          <option value="other">Other</option>
+        </select>
+
+        <label for="rimg">Image (optional)</label>
+        <input id="rimg" type="file" accept="image/*">
+
+        <label for="rtext">Recipe (instructions)</label>
+        <textarea id="rtext" rows="6" placeholder="Paste or type the recipe here..."></textarea>
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="saveRecipe" class="btn">Save Recipe</button>
+          <button id="promptRecipe" class="btn" style="background:#444">Quick add (use prompts)</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;color:#fff9">Saved recipes will appear in the correct category and in the home list. Recipes are stored locally in your browser.</div>
+    </section>
+  `;
+
+  document.getElementById('saveRecipe').addEventListener('click', async ()=>{
+    const name = document.getElementById('rname').value.trim();
+    const cat = document.getElementById('rcat').value;
+    const txt = document.getElementById('rtext').value.trim();
+    const file = document.getElementById('rimg').files[0];
+
+    if(!name || !txt){ alert('Please provide a name and recipe text.'); return; }
+
+    let imageData = '';
+    if(file){
+      imageData = await fileToBase64(file);
+    }
+
+    const id = 'user_' + Date.now();
+    const newDish = { id, name, category: cat==='other' ? 'other' : cat, image: imageData || '', recipe: txt };
+    state.dishes.push(newDish);
+    saveCustomDishes(state.dishes);
+    alert('Recipe saved! It will now appear in lists.');
+    navigate('recipe:' + id);
+  });
+
+  document.getElementById('promptRecipe').addEventListener('click', async ()=>{
+    const name = prompt('Dish name:');
+    if(!name) return alert('Cancelled or empty name.');
+    const cat = prompt('Category: meat or drinks (type exactly "meat" or "drinks")','meat') || 'meat';
+    const recipe = prompt('Paste the recipe / instructions:');
+    if(!recipe) return alert('Recipe not provided. Cancelled.');
+    const id = 'user_' + Date.now();
+    const newDish = { id, name, category: (cat==='drinks' ? 'drinks' : 'meat'), image: '', recipe };
+    state.dishes.push(newDish);
+    saveCustomDishes(state.dishes);
+    alert('Recipe saved via prompt!');
+    navigate('recipe:' + id);
+  });
+}
+
+function renderRecipeDetail(id){
+  const d = state.dishes.find(x=>x.id===id);
+  if(!d){ app.innerHTML = `<div style="padding:18px;background:var(--card);border-radius:10px">Recipe not found.</div>`; return; }
+  const isFav = state.favs.includes(d.id);
+  app.innerHTML = `
+    <div class="recipe-view">
+      <div class="back" id="backBtn">← Back</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px">
+        <h2>${escapeHtml(d.name)}</h2>
+        <div class="heart ${isFav ? 'active' : ''}" id="heartDetail">${isFav ? '♥' : '♡'}</div>
+      </div>
+      ${d.image ? `<img src="${d.image}" alt="${escapeHtml(d.name)}" onerror="this.style.display='none'">` : ''}
+      <div style="color:var(--muted);margin-bottom:10px">Category: ${escapeHtml(d.category)}</div>
+      <pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(d.recipe)}</pre>
+    </div>
+  `;
+
+  document.getElementById('backBtn').addEventListener('click', ()=>navigate('home'));
+  document.getElementById('heartDetail').addEventListener('click', ()=>{
+    toggleFav(d.id);
+    renderRecipeDetail(d.id);
+  });
+}
+
+/* ===== Interactions ===== */
+function onGridClick(e){
+  const card = e.target.closest('.card');
+  if(!card) return;
+  const dishId = card.dataset.id;
+  if(e.target.closest('.heart')){
+    toggleFav(e.target.closest('.heart').dataset.heart);
+    render();
+    return;
+  }
+  navigate('recipe:' + dishId);
+}
+
+function toggleFav(id){
+  let favs = getFavourites();
+  if(favs.includes(id)) favs = favs.filter(x=>x!==id); else favs.push(id);
+  saveFavourites(favs);
+  state.favs = favs;
+}
+
+/* file -> base64 helper for user uploads */
+function fileToBase64(file){
+  return new Promise((res, rej)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>res(reader.result);
+    reader.onerror = e=>rej(e);
+    reader.readAsDataURL(file);
+  });
+}
+
+function escapeHtml(s){
+  if(!s && s!==0) return '';
+  return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; });
+}
+
+/* wiring tabs & initial route */
+document.querySelectorAll('nav.tabs button').forEach(btn=>{
+  btn.addEventListener('click', ()=> navigate(btn.dataset.route));
+});
+
+const initial = (window.location.hash && window.location.hash.slice(1)) || 'home';
+navigate(initial, { skipHash: true });
+window.location.hash = initial;
+
+window.addEventListener('storage', ()=>{
+  state.dishes = loadDishes();
+  state.favs = getFavourites();
+  render();
+});
+</script>
+</body>
+</html>
